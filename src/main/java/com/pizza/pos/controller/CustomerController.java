@@ -8,120 +8,136 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-
-
-import java.util.Optional;
-
 @RestController
 @RequestMapping("/customer")
 //@CrossOrigin(origins = "*")
 public class CustomerController {
-	private String emailForReset;
-	private String generatedOTP; 
+
+    private String emailForReset;
+    private String generatedOTP; 
 
     private final AdminController adminController;
-
-	private final CustomerRepository customerRepository;
+    private final CustomerRepository customerRepository;
 
     @Autowired
     private CustomerService customerService;
 
-    // Constructor injection for repository
+    // Constructor injection
     CustomerController(CustomerRepository customerRepository, AdminController adminController) {
         this.customerRepository = customerRepository;
-		this.adminController = adminController;
+        this.adminController = adminController;
     }
 
+    // ================= REGISTER =================
     @PostMapping("/register")
     public String register(@RequestBody Customer customer) {
         return customerService.registerCustomer(customer);
     }
 
+    // ================= LOGIN (UPDATED + SAFE) =================
     @PostMapping("/login")
     public String login(@RequestBody Customer loginData) {
-        // Search for the user by email
+
+        // Debug logs (visible in Railway logs)
+        System.out.println("--- LOGIN ATTEMPT ---");
+        System.out.println("Received Email: " + loginData.getEmailID());
+        System.out.println("Received Password: " + loginData.getPassword());
+
         return customerRepository.findAll().stream()
-                .filter(user -> user.getEmailID().equals(loginData.getEmailID()) && 
-                                user.getPassword().equals(loginData.getPassword()))
+                .filter(user ->
+                        user.getEmailID() != null &&
+                        loginData.getEmailID() != null &&
+                        user.getEmailID().equalsIgnoreCase(loginData.getEmailID()) &&
+                        user.getPassword() != null &&
+                        user.getPassword().equals(loginData.getPassword())
+                )
                 .findFirst()
-                .map(user -> "SUCCESS") 
-                .orElse("FAIL"); 
+                .map(user -> "SUCCESS")
+                .orElse("FAIL");
     }
-    
+
+    // ================= FORGOT PASSWORD =================
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@RequestParam String email) {
+
         return customerRepository.findAll().stream()
-                .filter(c -> c.getEmailID().equalsIgnoreCase(email))
+                .filter(c -> c.getEmailID() != null &&
+                             c.getEmailID().equalsIgnoreCase(email))
                 .findFirst()
                 .map(user -> {
-                    // Generate a random 6-digit OTP
+
                     generatedOTP = String.valueOf((int)((Math.random() * 900000) + 100000));
                     emailForReset = email;
-                    
-                    // PRINT TO CONSOLE (In real life, you'd send an email here)
+
                     System.out.println("OTP for " + email + " is: " + generatedOTP);
-                    
+
                     return ResponseEntity.ok("OTP sent to your email!");
                 })
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Email not found"));
     }
 
+    // ================= RESET PASSWORD =================
     @PostMapping("/reset-password")
-    public ResponseEntity<String> resetPassword(@RequestParam String otp, @RequestParam String newPassword) {
-        if (otp.equals(generatedOTP)) {
+    public ResponseEntity<String> resetPassword(@RequestParam String otp,
+                                                @RequestParam String newPassword) {
+
+        if (generatedOTP != null && generatedOTP.equals(otp)) {
+
             return customerRepository.findAll().stream()
-                    .filter(c -> c.getEmailID().equalsIgnoreCase(emailForReset))
+                    .filter(c -> c.getEmailID() != null &&
+                                 c.getEmailID().equalsIgnoreCase(emailForReset))
                     .findFirst()
                     .map(user -> {
                         user.setPassword(newPassword);
                         customerRepository.save(user);
-                        generatedOTP = null; // Clear OTP after use
+                        generatedOTP = null;
+
                         return ResponseEntity.ok("Password changed successfully!");
                     })
                     .orElse(ResponseEntity.badRequest().body("Error updating password"));
         }
+
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid OTP!");
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    // --- NEW: VIEW PROFILE ENDPOINT ---
- // --- UPDATE: VIEW PROFILE BY EMAIL ---
+
+    // ================= VIEW PROFILE =================
     @GetMapping("/viewProfile/{email}")
     public ResponseEntity<Customer> viewProfile(@PathVariable String email) {
+
         return customerRepository.findAll().stream()
-                .filter(user -> user.getEmailID().equalsIgnoreCase(email))
+                .filter(user -> user.getEmailID() != null &&
+                                user.getEmailID().equalsIgnoreCase(email))
                 .findFirst()
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // --- UPDATE: UPDATE PROFILE BY EMAIL ---
+    // ================= UPDATE PROFILE =================
     @PutMapping("/updateProfile/{email}")
-    public ResponseEntity<String> updateProfile(@PathVariable String email, @RequestBody Customer updatedData) {
+    public ResponseEntity<String> updateProfile(@PathVariable String email,
+                                                @RequestBody Customer updatedData) {
+
         return customerRepository.findAll().stream()
-                .filter(user -> user.getEmailID().equalsIgnoreCase(email))
+                .filter(user -> user.getEmailID() != null &&
+                                user.getEmailID().equalsIgnoreCase(email))
                 .findFirst()
                 .map(customer -> {
-                    // Update Personal Info
+
+                    // Personal Info
                     customer.setFirstName(updatedData.getFirstName());
                     customer.setLastName(updatedData.getLastName());
                     customer.setGender(updatedData.getGender());
                     customer.setDateOfBirth(updatedData.getDateOfBirth());
-                    
-                    // Update Address Info
+
+                    // Address Info
                     customer.setStreet(updatedData.getStreet());
                     customer.setCity(updatedData.getCity());
                     customer.setState(updatedData.getState());
                     customer.setPincode(updatedData.getPincode());
                     customer.setMobileNo(updatedData.getMobileNo());
-                    
+
                     customerRepository.save(customer);
+
                     return ResponseEntity.ok("Profile Updated Successfully!");
                 })
                 .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found"));
