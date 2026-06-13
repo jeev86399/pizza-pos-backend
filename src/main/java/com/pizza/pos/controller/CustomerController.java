@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.*;
 //@CrossOrigin(origins = "*")
 public class CustomerController {
 
+    // Keeping this to support your React frontend
     private String emailForReset;
-    private String generatedOTP; 
 
     private final AdminController adminController;
     private final CustomerRepository customerRepository;
@@ -37,12 +37,8 @@ public class CustomerController {
     // ================= LOGIN (UPDATED + SAFE) =================
     @PostMapping("/login")
     public String login(@RequestBody Customer loginData) {
-
-        // Debug logs (visible in Railway logs)
         System.out.println("--- LOGIN ATTEMPT ---");
         System.out.println("Received Email: " + loginData.getEmailID());
-        System.out.println("Received Password: " + loginData.getPassword());
-
         return customerRepository.findAll().stream()
                 .filter(user ->
                         user.getEmailID() != null &&
@@ -59,21 +55,21 @@ public class CustomerController {
     // ================= FORGOT PASSWORD =================
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@RequestParam String email) {
+        System.out.println("--- CONTROLLER: FORGOT PASSWORD ENDPOINT HIT ---");
+        
+        // Save email temporarily for the reset step
+        this.emailForReset = email; 
 
-        return customerRepository.findAll().stream()
-                .filter(c -> c.getEmailID() != null &&
-                             c.getEmailID().equalsIgnoreCase(email))
-                .findFirst()
-                .map(user -> {
+        // CALLING YOUR ACTUAL SERVICE HERE!
+        String status = customerService.processForgotPassword(email);
 
-                    generatedOTP = String.valueOf((int)((Math.random() * 900000) + 100000));
-                    emailForReset = email;
-
-                    System.out.println("OTP for " + email + " is: " + generatedOTP);
-
-                    return ResponseEntity.ok("OTP sent to your email!");
-                })
-                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Email not found"));
+        if ("OTP_SENT".equals(status)) {
+            return ResponseEntity.ok("OTP sent to your email!");
+        } else if ("USER_NOT_FOUND".equals(status)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Email not found");
+        } else {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error processing request");
+        }
     }
 
     // ================= RESET PASSWORD =================
@@ -81,23 +77,29 @@ public class CustomerController {
     public ResponseEntity<String> resetPassword(@RequestParam String otp,
                                                 @RequestParam String newPassword) {
 
-        if (generatedOTP != null && generatedOTP.equals(otp)) {
+        System.out.println("--- CONTROLLER: RESET PASSWORD ENDPOINT HIT ---");
 
-            return customerRepository.findAll().stream()
-                    .filter(c -> c.getEmailID() != null &&
-                                 c.getEmailID().equalsIgnoreCase(emailForReset))
-                    .findFirst()
-                    .map(user -> {
-                        user.setPassword(newPassword);
-                        customerRepository.save(user);
-                        generatedOTP = null;
-
-                        return ResponseEntity.ok("Password changed successfully!");
-                    })
-                    .orElse(ResponseEntity.badRequest().body("Error updating password"));
+        if (emailForReset == null) {
+            return ResponseEntity.badRequest().body("Session expired. Please request OTP again.");
         }
 
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid OTP!");
+        // Verify OTP using your service
+        String verifyStatus = customerService.verifyOtp(emailForReset, otp);
+
+        if ("OTP_VALID".equals(verifyStatus)) {
+            
+            // Update the password using your service
+            String resetStatus = customerService.resetPassword(emailForReset, newPassword);
+
+            if ("PASSWORD_UPDATED".equals(resetStatus)) {
+                emailForReset = null; // Clear it out after success
+                return ResponseEntity.ok("Password changed successfully!");
+            } else {
+                return ResponseEntity.badRequest().body("Error updating password");
+            }
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid OTP!");
+        }
     }
 
     // ================= VIEW PROFILE =================
@@ -122,14 +124,10 @@ public class CustomerController {
                                 user.getEmailID().equalsIgnoreCase(email))
                 .findFirst()
                 .map(customer -> {
-
-                    // Personal Info
                     customer.setFirstName(updatedData.getFirstName());
                     customer.setLastName(updatedData.getLastName());
                     customer.setGender(updatedData.getGender());
                     customer.setDateOfBirth(updatedData.getDateOfBirth());
-
-                    // Address Info
                     customer.setStreet(updatedData.getStreet());
                     customer.setCity(updatedData.getCity());
                     customer.setState(updatedData.getState());
