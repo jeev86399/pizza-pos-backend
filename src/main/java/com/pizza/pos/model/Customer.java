@@ -23,6 +23,8 @@ public class Customer {
     private String emailID;
     private String password;
     private String role;
+ // 1. Add this field inside your class
+    private String otp;
 
     // ===== GETTERS AND SETTERS =====
 
@@ -116,7 +118,14 @@ public class Customer {
     public void setPassword(String password) { 
         this.password = password; 
     }
+ // 2. Add these getter and setter methods
+    public String getOtp() {
+        return otp;
+    }
 
+    public void setOtp(String otp) {
+        this.otp = otp;
+    }
     public String getRole() { 
         return role; 
     }
