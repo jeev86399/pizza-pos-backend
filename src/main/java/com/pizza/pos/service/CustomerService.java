@@ -13,7 +13,6 @@ public class CustomerService {
     @Autowired
     private CustomerRepository customerRepo;
 
-    // ✅ Inject Mail Service (IMPORTANT: name must match your class)
     @Autowired
     private MailService mailService;
 
@@ -49,32 +48,40 @@ public class CustomerService {
     // ================= GENERATE OTP =================
     private String generateOtp() {
         Random random = new Random();
-        int otp = 1000 + random.nextInt(9000);
+        int otp = 100000 + random.nextInt(900000); // 6-digit OTP
         return String.valueOf(otp);
     }
 
     // ================= FORGOT PASSWORD =================
     public String processForgotPassword(String email) {
         try {
+            System.out.println("Forgot Password Request for: " + email);
+
             Customer customer = customerRepo.findByEmailID(email);
 
             if (customer == null) {
+                System.out.println("Customer not found");
                 return "USER_NOT_FOUND";
             }
 
-            // ✅ Generate OTP
+            // Generate OTP
             String otp = generateOtp();
+            System.out.println("Generated OTP: " + otp);
 
-            // ✅ Save OTP
+            // Save OTP
             customer.setOtp(otp);
             customerRepo.save(customer);
+            System.out.println("OTP saved to database");
 
-            // ✅ Send Email (MAIN STEP)
+            // Send Email
+            System.out.println("Calling MailService...");
             mailService.sendOtpEmail(email, otp);
+            System.out.println("MailService completed successfully");
 
             return "OTP_SENT";
 
         } catch (Exception e) {
+            System.out.println("ERROR IN processForgotPassword()");
             e.printStackTrace();
             return "FAIL";
         }
@@ -89,7 +96,8 @@ public class CustomerService {
                 return "USER_NOT_FOUND";
             }
 
-            if (customer.getOtp() != null && customer.getOtp().equals(enteredOtp)) {
+            if (customer.getOtp() != null &&
+                customer.getOtp().equals(enteredOtp)) {
                 return "OTP_VALID";
             } else {
                 return "INVALID_OTP";
@@ -111,7 +119,7 @@ public class CustomerService {
             }
 
             customer.setPassword(newPassword);
-            customer.setOtp(null); // clear OTP
+            customer.setOtp(null);
 
             customerRepo.save(customer);
 
