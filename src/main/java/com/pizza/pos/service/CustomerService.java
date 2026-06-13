@@ -58,32 +58,46 @@ public class CustomerService {
 
     // ================= FORGOT PASSWORD =================
     public String processForgotPassword(String email) {
+
+        System.out.println("DEBUG: Entering processForgotPassword for: " + email);
+
         try {
-            System.out.println("Forgot Password Request for: " + email);
 
             Customer customer = customerRepo.findByEmailID(email);
 
             if (customer == null) {
-                System.out.println("Customer not found");
+                System.out.println("DEBUG: Customer not found");
                 return "USER_NOT_FOUND";
             }
 
             String otp = generateOtp();
-            System.out.println("Generated OTP: " + otp);
+            System.out.println("DEBUG: Generated OTP = " + otp);
 
             customer.setOtp(otp);
             customerRepo.save(customer);
-            System.out.println("OTP saved to database");
 
-            System.out.println("Calling MailService...");
-            mailService.sendOtpEmail(email, otp);
-            System.out.println("MailService completed successfully");
+            System.out.println("DEBUG: OTP saved to database");
+            System.out.println("DEBUG: About to call mailService.sendOtpEmail");
+
+            try {
+
+                mailService.sendOtpEmail(email, otp);
+
+                System.out.println("DEBUG: MailService call finished");
+
+            } catch (Exception e) {
+
+                System.err.println("DEBUG: MailService call THREW AN EXCEPTION");
+                e.printStackTrace();
+            }
 
             return "OTP_SENT";
 
         } catch (Exception e) {
-            System.out.println("ERROR IN processForgotPassword()");
+
+            System.err.println("DEBUG: processForgotPassword FAILED");
             e.printStackTrace();
+
             return "FAIL";
         }
     }
@@ -91,6 +105,7 @@ public class CustomerService {
     // ================= VERIFY OTP =================
     public String verifyOtp(String email, String enteredOtp) {
         try {
+
             Customer customer = customerRepo.findByEmailID(email);
 
             if (customer == null) {
@@ -99,8 +114,11 @@ public class CustomerService {
 
             if (customer.getOtp() != null &&
                 customer.getOtp().equals(enteredOtp)) {
+
                 return "OTP_VALID";
+
             } else {
+
                 return "INVALID_OTP";
             }
 
@@ -113,6 +131,7 @@ public class CustomerService {
     // ================= RESET PASSWORD =================
     public String resetPassword(String email, String newPassword) {
         try {
+
             Customer customer = customerRepo.findByEmailID(email);
 
             if (customer == null) {
