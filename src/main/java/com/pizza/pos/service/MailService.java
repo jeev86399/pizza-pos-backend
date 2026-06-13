@@ -31,10 +31,10 @@ public class MailService {
             message.setTo(to);
             message.setSubject("Pizza Ordering System - Password Reset OTP");
             message.setText(
-                "Dear User,\n\n" +
-                "Your OTP for password reset is: " + otp +
-                "\n\nThis OTP is valid for a limited time.\n\n" +
-                "Regards,\nPizza Ordering System"
+                    "Dear User,\n\n" +
+                    "Your OTP for password reset is: " + otp +
+                    "\n\nThis OTP is valid for a limited time.\n\n" +
+                    "Regards,\nPizza Ordering System"
             );
 
             System.out.println("Attempting to send email...");
@@ -46,13 +46,14 @@ public class MailService {
 
         } catch (Exception e) {
 
-            System.out.println("=================================");
-            System.out.println("CRITICAL MAIL ERROR");
-            System.out.println("ERROR MESSAGE: " + e.getMessage());
+            System.err.println("=================================");
+            System.err.println("FATAL MAIL ERROR");
+            System.err.println("------------------------");
 
             e.printStackTrace();
 
-            System.out.println("=================================");
+            System.err.println("------------------------");
+            System.err.println("=================================");
         }
     }
 }

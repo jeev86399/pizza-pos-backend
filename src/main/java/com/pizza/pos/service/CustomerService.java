@@ -10,11 +10,15 @@ import java.util.Random;
 @Service
 public class CustomerService {
 
-    @Autowired
-    private CustomerRepository customerRepo;
+    private final CustomerRepository customerRepo;
+    private final MailService mailService;
 
     @Autowired
-    private MailService mailService;
+    public CustomerService(CustomerRepository customerRepo,
+                           MailService mailService) {
+        this.customerRepo = customerRepo;
+        this.mailService = mailService;
+    }
 
     // ================= REGISTER =================
     public String registerCustomer(Customer customer) {
@@ -48,7 +52,7 @@ public class CustomerService {
     // ================= GENERATE OTP =================
     private String generateOtp() {
         Random random = new Random();
-        int otp = 100000 + random.nextInt(900000); // 6-digit OTP
+        int otp = 100000 + random.nextInt(900000);
         return String.valueOf(otp);
     }
 
@@ -64,16 +68,13 @@ public class CustomerService {
                 return "USER_NOT_FOUND";
             }
 
-            // Generate OTP
             String otp = generateOtp();
             System.out.println("Generated OTP: " + otp);
 
-            // Save OTP
             customer.setOtp(otp);
             customerRepo.save(customer);
             System.out.println("OTP saved to database");
 
-            // Send Email
             System.out.println("Calling MailService...");
             mailService.sendOtpEmail(email, otp);
             System.out.println("MailService completed successfully");
