@@ -32,8 +32,8 @@ public class MailService {
         // Use the email you signed up with for Brevo as the sender
         Map<String, Object> sender = new HashMap<>();
         sender.put("name", "Pizza POS");
-        sender.put("email", "sj631957@gmail.com"); 
-
+        sender.put("email", "ns3241561@gmail.com");
+        
         Map<String, Object> to = new HashMap<>();
         to.put("email", toEmail);
 
