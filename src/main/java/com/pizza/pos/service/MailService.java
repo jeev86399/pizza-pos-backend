@@ -1,59 +1,48 @@
 package com.pizza.pos.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class MailService {
 
-    @Autowired
-    private JavaMailSender mailSender;
+    @Value("${resend.api.key}")
+    private String resendApiKey;
 
-    @Value("${spring.mail.username}")
-    private String fromEmail;
+    public void sendOtpEmail(String toEmail, String otp) {
+        
+        System.out.println("DEBUG: Sending email via Resend API to: " + toEmail);
+        
+        RestTemplate restTemplate = new RestTemplate();
+        String url = "https://api.resend.com/emails";
 
-    public void sendOtpEmail(String to, String otp) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(resendApiKey);
+
+        Map<String, Object> body = new HashMap<>();
+        // Note: Using the free testing email address provided by Resend
+        body.put("from", "Pizza POS <onboarding@resend.dev>");
+        body.put("to", List.of(toEmail)); 
+        body.put("subject", "Your Password Reset OTP");
+        body.put("html", "<h2>Pizza Ordering System</h2><p>Your OTP is: <strong>" + otp + "</strong></p>");
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
 
         try {
-
-            System.out.println("=================================");
-            System.out.println("MAIL SERVICE STARTED");
-            System.out.println("TO: " + to);
-            System.out.println("FROM: " + fromEmail);
-            System.out.println("OTP: " + otp);
-
-            SimpleMailMessage message = new SimpleMailMessage();
-
-            message.setFrom(fromEmail);
-            message.setTo(to);
-            message.setSubject("Pizza Ordering System - Password Reset OTP");
-            message.setText(
-                    "Dear User,\n\n" +
-                    "Your OTP for password reset is: " + otp +
-                    "\n\nThis OTP is valid for a limited time.\n\n" +
-                    "Regards,\nPizza Ordering System"
-            );
-
-            System.out.println("Attempting to send email...");
-
-            mailSender.send(message);
-
-            System.out.println("MAIL SENT SUCCESSFULLY");
-            System.out.println("=================================");
-
+            restTemplate.postForEntity(url, request, String.class);
+            System.out.println("DEBUG: Resend API Success!");
         } catch (Exception e) {
-
-            System.err.println("=================================");
-            System.err.println("FATAL MAIL ERROR");
-            System.err.println("------------------------");
-
+            System.err.println("DEBUG: Resend API Failed.");
             e.printStackTrace();
-
-            System.err.println("------------------------");
-            System.err.println("=================================");
         }
     }
 }
