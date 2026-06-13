@@ -7,7 +7,7 @@ import jakarta.persistence.*;
 public class Customer {
 
     @Id
-    @Column(name = "user_id") // maps to DB column
+    @Column(name = "userId") // maps to DB column
     private String userId; 
 
     private String firstName;
